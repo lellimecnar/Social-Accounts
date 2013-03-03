@@ -9,7 +9,6 @@ class Admin extends Admin_Controller
 
         $this->lang->load('accounts');
         $this->load->model('accounts_m');
-        $this->load->model('providers_m');
     }
 
     public function index($method)
@@ -19,11 +18,11 @@ class Admin extends Admin_Controller
         $this->template->active_section = $method;
         $view_path = 'admin/'.$method.'/index';
 
-        $data = array('providers' => $this->providers_m->get_providers());
+        $data = array('providers' => $this->accounts_m->get_providers());
 
         if($method != 'providers')
         {
-            $data[$method] = $this->{ $method.'_m' }->{ 'get_'.$method }();
+            $data[$method] = $this->accounts_m->{ 'get_'.$method }();
         }
 
         $this->template
