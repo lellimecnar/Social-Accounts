@@ -9,10 +9,17 @@ class Admin extends Admin_Controller
 
         $this->lang->load('accounts');
         $this->load->model('accounts_m');
+        $this->load->library('accounts/accounts');
     }
 
     public function index($method)
     {
+        Accounts::auth('google');
+        //Accounts::add_scope('google','https://www.googleapis.com/auth/calendar');
+        Accounts::set_user(Accounts::admin);
+        Accounts::google('oauth2/v1/userinfo');
+        exit;
+
         if($method == 'index') $method = 'accounts';
 
         $this->template->active_section = $method;

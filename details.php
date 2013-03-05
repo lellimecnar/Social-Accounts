@@ -42,6 +42,7 @@ class Module_Accounts extends Module
     public function install()
     {
         $this->lang->load('accounts/accounts');
+        $this->load->library('accounts/accounts');
 
         $this->streams->streams->add_stream(lang($this->ns.':accounts'), 'accounts', $this->ns);
         $this->streams->streams->add_stream(lang($this->ns.':providers'), 'providers', $this->ns);
@@ -61,6 +62,15 @@ class Module_Accounts extends Module
                 'required' => true
             ),
             array(
+                'name' => 'lang:'.$this->ns.':field:slug',
+                'slug' => 'slug',
+                'namespace' => $this->ns,
+                'type' => 'slug',
+                'extra' => array('slug_field' => 'name'),
+                'assign' => 'providers',
+                'required' => true
+            ),
+            array(
                 'name' => 'lang:'.$this->ns.':field:client_key',
                 'slug' => 'client_key',
                 'namespace' => $this->ns,
@@ -75,39 +85,46 @@ class Module_Accounts extends Module
                 'assign' => 'providers'
             ),
             array(
-                'name' => 'lang:'.$this->ns.':field:scope',
-                'slug' => 'scope', 
-                'namespace' => $this->ns,
-                'type' => 'text',
-                'assign' => 'providers'
-            ),
-            array(
-                'name' => 'lang:'.$this->ns.':field:access_token',
-                'slug' => 'access_token', 
-                'namespace' => $this->ns,
-                'type' => 'text',
-                'assign' => 'providers'
-            ),
-            array(
-                'name' => 'lang:'.$this->ns.':field:uid',
-                'slug' => 'uid', 
-                'namespace' => $this->ns,
-                'type' => 'text',
-                'assign' => 'providers'
-            ),
-            array(
-                'name' => 'lang:'.$this->ns.':field:expiration',
-                'slug' => 'expiration', 
-                'namespace' => $this->ns,
-                'type' => 'datetime',
-                'assign' => 'providers'
-            ),
-            array(
                 'name' => 'lang:'.$this->ns.':field:oauth_version',
                 'slug' => 'oauth_version', 
                 'namespace' => $this->ns,
                 'type' => 'choice',
                 'extra' => array('choice_data' => '1'."\r\n".'2', 'choice_type' => 'dropdown', 'default_value' => 2),
+                'assign' => 'providers'
+            ),
+            array(
+                'name' => 'lang:'.$this->ns.':field:auth_url',
+                'slug' => 'auth_url', 
+                'namespace' => $this->ns,
+                'type' => 'text',
+                'assign' => 'providers'
+            ),
+            array(
+                'name' => 'lang:'.$this->ns.':field:token_url',
+                'slug' => 'token_url', 
+                'namespace' => $this->ns,
+                'type' => 'text',
+                'assign' => 'providers'
+            ),
+            array(
+                'name' => 'lang:'.$this->ns.':field:api_url',
+                'slug' => 'api_url', 
+                'namespace' => $this->ns,
+                'type' => 'text',
+                'assign' => 'providers'
+            ),
+            array(
+                'name' => 'lang:'.$this->ns.':field:default_scopes',
+                'slug' => 'default_scopes', 
+                'namespace' => $this->ns,
+                'type' => 'textarea',
+                'assign' => 'providers'
+            ),
+            array(
+                'name' => 'lang:'.$this->ns.':field:scope_sep',
+                'slug' => 'scope_sep', 
+                'namespace' => $this->ns,
+                'type' => 'text',
                 'assign' => 'providers'
             ),
             array(
@@ -124,40 +141,200 @@ class Module_Accounts extends Module
                 'type' => 'relationship',
                 'extra' => array('choose_stream' => $streams['providers']->id),
                 'assign' => 'accounts'
+            ),
+            array(
+                'name' => 'lang:'.$this->ns.':field:access_token',
+                'slug' => 'access_token', 
+                'namespace' => $this->ns,
+                'type' => 'text',
+                'assign' => 'accounts'
+            ),
+            array(
+                'name' => 'lang:'.$this->ns.':field:token_type',
+                'slug' => 'token_type', 
+                'namespace' => $this->ns,
+                'type' => 'text',
+                'assign' => 'accounts'
+            ),
+            array(
+                'name' => 'lang:'.$this->ns.':field:id_token',
+                'slug' => 'id_token', 
+                'namespace' => $this->ns,
+                'type' => 'textarea',
+                'assign' => 'accounts'
+            ),
+            array(
+                'name' => 'lang:'.$this->ns.':field:expiration',
+                'slug' => 'expiration', 
+                'namespace' => $this->ns,
+                'type' => 'datetime',
+                'assign' => 'accounts'
             )
         );
 
         $this->streams->fields->add_fields($fields);
 
-        $this->streams->fields->assign_field($this->ns, 'accounts', 'access_token');
-        $this->streams->fields->assign_field($this->ns, 'accounts', 'uid');
-
         $providers = array(
-            'Blooie' => 2,
-            'Dropbox' => 1,
-            'Facebook' => 2,
-            'Flickr' => 1,
-            'Foursquare' => 2,
-            'GitHub' => 2,
-            'Google' => 2,
-            'Instagram' => 2,
-            'LinkedIn' => 1,
-            'MailChimp' => 2,
-            'Mail.Ru' => 2,
-            'SoundCloud' => 2,
-            'Tumblr' => 1,
-            'Twitter' => 1,
-            'VKontakte' => 2,
-            'Windows Live' => 2,
-            'Yandex' => 2,
+            'Blooie' => array(
+                'oauth_version' => 2,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
+            'Dropbox' => array(
+                'oauth_version' => 1,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
+            'Facebook' => array(
+                'oauth_version' => 2,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
+            'Flickr' => array(
+                'oauth_version' => 1,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
+            'Foursquare' => array(
+                'oauth_version' => 2,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
+            'GitHub' => array(
+                'oauth_version' => 2,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
+            'Google' => array(
+                'oauth_version' => 2,
+                'auth_url' => 'https://accounts.google.com/o/oauth2/auth',
+                'token_url' => 'https://accounts.google.com/o/oauth2/token',
+                'api_url' => 'https://www.googleapis.com',
+                'scope_sep' => ' ',
+                'scopes' => array(
+                    'https://www.googleapis.com/auth/userinfo.profile', 
+                    'https://www.googleapis.com/auth/userinfo.email'
+                )
+            ),
+            'Instagram' => array(
+                'oauth_version' => 2,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
+            'LinkedIn' => array(
+                'oauth_version' => 1,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
+            'MailChimp' => array(
+                'oauth_version' => 2,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
+            'Mail.Ru' => array(
+                'oauth_version' => 2,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
+            'SoundCloud' => array(
+                'oauth_version' => 2,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
+            'Tumblr' => array(
+                'oauth_version' => 1,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
+            'Twitter' => array(
+                'oauth_version' => 1,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
+            'VKontakte' => array(
+                'oauth_version' => 2,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
+            'Windows Live' => array(
+                'oauth_version' => 2,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
+            'Yandex' => array(
+                'oauth_version' => 2,
+                'auth_url' => '',
+                'token_url' => '',
+                'api_url' => '',
+                'scopes' => array(
+
+                )
+            ),
         );
 
-        foreach($providers as $name => $version)
+        foreach($providers as $name => $data)
         {
-            $this->streams->entries->insert_entry(array(
-                'name' => $name,
-                'oauth_version' => $version
-            ), 'providers', $this->ns);
+            Accounts::add_provider($name, $data);
         }
 
         return true;

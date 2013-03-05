@@ -20,9 +20,15 @@ class Accounts_m extends MY_Model
     {
         empty($args) and $args = array( array() );
 
-        preg_match('/^(get|save|delete)_?(data|accounts|providers)$/', strtolower($method), $m);
-        if(sizeof($m) == 3)
+        preg_match('/^(get|save|delete)_?(data|account|provider)(s?)$/', strtolower($method), $m);
+
+        if(sizeof($m) > 3)
         {
+            if($m[3] == '')
+            {
+                $m[1] .= '_single';
+            }
+            $m[2] .= 's';
             return $this->{'_'.$m[1]}($m[2], $args);
         }
         return null;
@@ -30,10 +36,28 @@ class Accounts_m extends MY_Model
 
     private function _get($stream, $args)
     {
+        isset($args[0]) or $args[0] = array();
         is_array($args[0]) or $args[0] = array();
         $params = array_merge( $this->params['global'], $this->params[$stream], $args[0] );
         $result = $this->streams->entries->get_entries($params);
         return $this->{ '_' . $stream }( $result['entries'] );
+    }
+
+    private function _get_single($stream, $args)
+    {
+        switch($stream)
+        {
+            case 'accounts':
+                $provider = $this->get_provider($args[1]);
+                $where = 'user = '.$args[0].' AND provider = '.$provider->id;
+                break;
+            case 'providers':
+                is_numeric($args[0]) or $args[0] = preg_replace( '/[^a-z]+/', '', strtolower($args[0]) );
+                $where = (is_numeric($args[0])? 'id' : 'slug').' = \''.$args[0].'\'';
+                break;
+        }
+        $result = $this->_get( $stream, array(array('where' => $where)) );
+        return isset($result[0])? $result[0] : null;
     }
 
     private function _save($stream, $args)
@@ -53,23 +77,13 @@ class Accounts_m extends MY_Model
 
     private function _accounts($entries)
     {
-        $return = array();
-
-        foreach($this->db
-            ->select('id')
-            ->get('providers')
-            ->result() as $p)
-        {
-            $return[ $p->id ] = array();
-        }
-
         foreach($entries as &$e)
         {
             $e = (object) $e;
-            $return[ (int) $e->provider['id'] ][] = $e;
+            $e->id = (int) $e->id;
         }
 
-        return $return;
+        return $entries;
     }
 
     private function _providers($entries)
@@ -77,11 +91,14 @@ class Accounts_m extends MY_Model
         foreach($entries as &$e)
         {
             $e = (object) $e;
+            $e->id = (int) $e->id;
             $e->oauth_version = (int) $e->oauth_version['key'];
             $e->slug = preg_replace('/[^a-z]+/','',strtolower($e->name));
+            $e->default_scopes = preg_split('/[\r\n]+/', $e->default_scopes);
+            $e->scopes = $e->default_scopes;
+            empty($e->scope_sep) and $e->scope_sep = ' ';
         }
 
         return $entries;
     }
-
 }
