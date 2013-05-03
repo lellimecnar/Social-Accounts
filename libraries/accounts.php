@@ -9,11 +9,6 @@ class Accounts
 
     public function __construct()
     {
-        self::init();
-    }
-
-    private static function init()
-    {
         self::$ci =& get_instance();
         self::$ci->load->model('accounts/accounts_m');
         self::$ch = curl_init();
@@ -30,7 +25,7 @@ class Accounts
 
     public static function provider($slug)
     {
-        $slug = self::_slugify($slug);
+        $slug = url_title($slug, '_');
         if(!isset(self::$providers[$slug])){
             $provider = self::$ci->accounts_m->get_provider($slug);
             is_null($provider) or self::$providers[$slug] = $provider;
@@ -42,7 +37,7 @@ class Accounts
     {
         $params = array(
             'name' => $name,
-            'slug' => self::_slugify($name),
+            'slug' => url_title($name, '_'),
             'scope_sep' => ','
         );
         foreach($args as $key => $val)
@@ -67,8 +62,16 @@ class Accounts
 
     public static function add_scope($provider, $scope)
     {
+        // Get the provider
         $provider = self::provider($provider);
         self::$providers[$provider->slug]->scopes[] = $scope;
+    }
+
+    public function set_service($provider, $api_prepend)
+    {
+        // Get the provider
+        $provider = self::provider($provider);
+        self::$providers[$provider->slug]->api_prepend = trim($api_prepend, '/').'/';
     }
 
     public static function set_user($id)
@@ -78,24 +81,27 @@ class Accounts
 
     public static function account($provider)
     {
+        // Get the provider
         $provider = self::provider($provider);
         return self::$ci->accounts_m->get_account(self::$user, $provider->slug);
     }
 
     public static function __callStatic($method, $args)
     {
+        // Get the provider
         $provider = self::provider($method);
 
         if(is_null($provider)) return null;
         if(isset($args[0]))
         {
+            $url = rtrim($provider->api_url, '/').'/';
+            isset($provider->api_prepend) and $url .= $provider->api_prepend;
+            $url .= trim($args[0], '/');
+
             $params = array(
                 'access_token' => self::access_token($provider->slug)
             );
             isset($args[1]) and $params = array_merge($params, $args[1]);
-            $url = rtrim($provider->api_url, '/').'/';
-            $url .= trim($args[0], '/');
-
             $result = self::_do_curl($url, $params, 'get');
             return json_decode($result);
         }
@@ -103,6 +109,7 @@ class Accounts
 
     public static function auth($provider, $key = null, $secret = null)
     {
+        // Get the provider
         $provider = self::provider($provider);
         if(isset($_GET['code']))
         {
@@ -122,7 +129,6 @@ class Accounts
                     'provider' => $provider->id,
                     'access_token' => $result->access_token,
                     'token_type' => $result->token_type,
-                    'id_token' => $result->id_token,
                     'expiration' => date('Y-m-d G:i:s', now() + ((int) $result->expires_in * 100))
                 );
 
@@ -158,6 +164,7 @@ class Accounts
 
     private static function access_token($provider)
     {
+        // Get the provider
         $provider = self::provider($provider);
         $account = self::account($provider->slug);
         if(isset($account->access_token)){
@@ -195,10 +202,5 @@ class Accounts
         $header_size = curl_getinfo(self::$ch, CURLINFO_HEADER_SIZE);
         self::$curl_header = trim(substr($result, 0, $header_size));
         return trim(substr($result, $header_size));
-    }
-
-    private static function _slugify($str)
-    {
-        return preg_replace('/[^a-z]+/','',strtolower($str));
     }
 }

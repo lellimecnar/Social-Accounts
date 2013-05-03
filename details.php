@@ -44,13 +44,36 @@ class Module_Accounts extends Module
         $this->lang->load('accounts/accounts');
         $this->load->library('accounts/accounts');
 
-        $this->streams->streams->add_stream(lang($this->ns.':accounts'), 'accounts', $this->ns);
-        $this->streams->streams->add_stream(lang($this->ns.':providers'), 'providers', $this->ns);
+        $this->streams->streams->add_stream(
+            lang($this->ns.':providers'), 
+            'providers', 
+            $this->ns, 
+            'social_', 
+            null, 
+            array(
+                'title_column' => 'name', 
+                'is_hidden' => true, 
+                'view_options' => array('name', 'client_key', 'oauth_version')
+            )
+        );
+
+        $this->streams->streams->add_stream(
+            lang($this->ns.':accounts'), 
+            'accounts', 
+            $this->ns, 
+            'social_', 
+            null, 
+            array(
+                'title_column' => 'provider', 
+                'is_hidden' => true, 
+                'view_options' => array('provider', 'user')
+            )
+        );
 
         $streams = array();
 
-        $streams['accounts'] = $this->streams->streams->get_stream('accounts', $this->ns);
         $streams['providers'] = $this->streams->streams->get_stream('providers', $this->ns);
+        $streams['accounts'] = $this->streams->streams->get_stream('accounts', $this->ns);
 
         $fields = array(
             array(
@@ -127,6 +150,8 @@ class Module_Accounts extends Module
                 'type' => 'text',
                 'assign' => 'providers'
             ),
+
+
             array(
                 'name' => 'lang:'.$this->ns.':field:user',
                 'slug' => 'user', 
@@ -157,13 +182,6 @@ class Module_Accounts extends Module
                 'assign' => 'accounts'
             ),
             array(
-                'name' => 'lang:'.$this->ns.':field:id_token',
-                'slug' => 'id_token', 
-                'namespace' => $this->ns,
-                'type' => 'textarea',
-                'assign' => 'accounts'
-            ),
-            array(
                 'name' => 'lang:'.$this->ns.':field:expiration',
                 'slug' => 'expiration', 
                 'namespace' => $this->ns,
@@ -175,15 +193,6 @@ class Module_Accounts extends Module
         $this->streams->fields->add_fields($fields);
 
         $providers = array(
-            'Blooie' => array(
-                'oauth_version' => 2,
-                'auth_url' => '',
-                'token_url' => '',
-                'api_url' => '',
-                'scopes' => array(
-
-                )
-            ),
             'Dropbox' => array(
                 'oauth_version' => 1,
                 'auth_url' => '',
@@ -267,7 +276,7 @@ class Module_Accounts extends Module
 
                 )
             ),
-            'Mail.Ru' => array(
+            'SalesForce' => array(
                 'oauth_version' => 2,
                 'auth_url' => '',
                 'token_url' => '',
@@ -303,25 +312,7 @@ class Module_Accounts extends Module
 
                 )
             ),
-            'VKontakte' => array(
-                'oauth_version' => 2,
-                'auth_url' => '',
-                'token_url' => '',
-                'api_url' => '',
-                'scopes' => array(
-
-                )
-            ),
             'Windows Live' => array(
-                'oauth_version' => 2,
-                'auth_url' => '',
-                'token_url' => '',
-                'api_url' => '',
-                'scopes' => array(
-
-                )
-            ),
-            'Yandex' => array(
                 'oauth_version' => 2,
                 'auth_url' => '',
                 'token_url' => '',

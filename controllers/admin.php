@@ -14,12 +14,6 @@ class Admin extends Admin_Controller
 
     public function index($method)
     {
-        Accounts::set_user(Accounts::admin);
-        Accounts::auth('google');
-        //Accounts::add_scope('google','https://www.googleapis.com/auth/calendar');
-        dump(Accounts::google('oauth2/v1/userinfo'));
-        exit;
-
         if($method == 'index') $method = 'accounts';
 
         $this->template->active_section = $method;
