@@ -1,9 +1,15 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed');
 
+/**
+ * Accounts
+ *
+ * @author  Lance Miller <lance@astolat.com>
+ */
 class Module_Accounts extends Module
 {
     public $version = '1.0.0';
 
+    // Our streams namespace
     private $ns = 'accounts';
 
     public function info()
@@ -41,9 +47,11 @@ class Module_Accounts extends Module
 
     public function install()
     {
+        // Load our stuff
         $this->lang->load('accounts/accounts');
         $this->load->library('accounts/accounts');
 
+        // Create our streams
         $this->streams->streams->add_stream(
             lang($this->ns.':providers'), 
             'providers', 
@@ -70,11 +78,11 @@ class Module_Accounts extends Module
             )
         );
 
-        $streams = array();
-
+        // Save the stream info for later
         $streams['providers'] = $this->streams->streams->get_stream('providers', $this->ns);
         $streams['accounts'] = $this->streams->streams->get_stream('accounts', $this->ns);
 
+        // Set up our fields...
         $fields = array(
             array(
                 'name' => 'lang:'.$this->ns.':field:name',
@@ -137,6 +145,30 @@ class Module_Accounts extends Module
                 'assign' => 'providers'
             ),
             array(
+                'name' => 'lang:'.$this->ns.':field:auth_method',
+                'slug' => 'auth_method', 
+                'namespace' => $this->ns,
+                'type' => 'choice',
+                'extra' => array(
+                    'choice_type' => 'dropdown',
+                    'choice_data' => 'get : GET'."\r\n".'post : POST',
+                    'default_value' => 'get'
+                ),
+                'assign' => 'providers'
+            ),
+            array(
+                'name' => 'lang:'.$this->ns.':field:api_method',
+                'slug' => 'api_method', 
+                'namespace' => $this->ns,
+                'type' => 'choice',
+                'extra' => array(
+                    'choice_type' => 'dropdown',
+                    'choice_data' => 'get : GET'."\r\n".'post : POST',
+                    'default_value' => 'get'
+                ),
+                'assign' => 'providers'
+            ),
+            array(
                 'name' => 'lang:'.$this->ns.':field:default_scopes',
                 'slug' => 'default_scopes', 
                 'namespace' => $this->ns,
@@ -190,25 +222,31 @@ class Module_Accounts extends Module
             )
         );
 
+        // ...and add them
         $this->streams->fields->add_fields($fields);
 
+        // Our default providers
         $providers = array(
             'Dropbox' => array(
                 'oauth_version' => 1,
                 'auth_url' => '',
                 'token_url' => '',
                 'api_url' => '',
-                'scopes' => array(
+                'auth_method' => 'post',
+                'api_method' => 'get',
+                'default_scopes' => array(
 
                 )
             ),
             'Facebook' => array(
                 'oauth_version' => 2,
-                'auth_url' => '',
-                'token_url' => '',
-                'api_url' => '',
-                'scopes' => array(
-
+                'auth_url' => 'https://www.facebook.com/dialog/oauth',
+                'token_url' => 'https://graph.facebook.com/oauth/access_token',
+                'api_url' => 'https://graph.facebook.com',
+                'default_scopes' => array(
+                    'offline_access', 
+                    'email', 
+                    'read_stream'
                 )
             ),
             'Flickr' => array(
@@ -216,27 +254,24 @@ class Module_Accounts extends Module
                 'auth_url' => '',
                 'token_url' => '',
                 'api_url' => '',
-                'scopes' => array(
+                'auth_method' => 'post',
+                'api_method' => 'get',
+                'default_scopes' => array(
 
                 )
             ),
             'Foursquare' => array(
                 'oauth_version' => 2,
-                'auth_url' => '',
-                'token_url' => '',
-                'api_url' => '',
-                'scopes' => array(
-
-                )
+                'auth_url' => 'https://foursquare.com/oauth2/authenticate',
+                'token_url' => 'https://foursquare.com/oauth2/access_token',
+                'api_url' => 'https://api.foursquare.com/v2',
+                'auth_method' => 'post',
             ),
             'GitHub' => array(
                 'oauth_version' => 2,
-                'auth_url' => '',
-                'token_url' => '',
-                'api_url' => '',
-                'scopes' => array(
-
-                )
+                'auth_url' => 'https://github.com/login/oauth/authorize',
+                'token_url' => 'https://github.com/login/oauth/access_token',
+                'api_url' => 'https://api.github.com'
             ),
             'Google' => array(
                 'oauth_version' => 2,
@@ -244,54 +279,69 @@ class Module_Accounts extends Module
                 'token_url' => 'https://accounts.google.com/o/oauth2/token',
                 'api_url' => 'https://www.googleapis.com',
                 'scope_sep' => ' ',
-                'scopes' => array(
+                'auth_method' => 'post',
+                'default_scopes' => array(
                     'https://www.googleapis.com/auth/userinfo.profile', 
                     'https://www.googleapis.com/auth/userinfo.email'
                 )
             ),
             'Instagram' => array(
                 'oauth_version' => 2,
-                'auth_url' => '',
-                'token_url' => '',
+                'auth_url' => 'https://api.instagram.com/oauth/authorize',
+                'token_url' => 'https://api.instagram.com/oauth/access_token',
                 'api_url' => '',
-                'scopes' => array(
-
-                )
+                'auth_method' => 'post',
+                'scope_sep' => '+'
             ),
             'LinkedIn' => array(
                 'oauth_version' => 1,
                 'auth_url' => '',
                 'token_url' => '',
                 'api_url' => '',
-                'scopes' => array(
+                'auth_method' => 'post',
+                'api_method' => 'get',
+                'default_scopes' => array(
 
                 )
             ),
             'MailChimp' => array(
                 'oauth_version' => 2,
-                'auth_url' => '',
-                'token_url' => '',
+                'auth_url' => 'https://login.mailchimp.com/oauth2/authorize',
+                'token_url' => 'https://login.mailchimp.com/oauth2/token',
                 'api_url' => '',
-                'scopes' => array(
-
+                'auth_method' => 'post'
+            ),
+            'PayPal' => array(
+                'oauth_version' => 2,
+                'auth_url' => 'https://www.paypal.com/webapps/auth/protocol/openidconnect/v1/authorize',
+                'token_url' => 'https://api.paypal.com/v1/oauth2/token',
+                'api_url' => 'https://api.paypal.com',
+                'scope_sep' => ' ',
+                'auth_method' => 'post',
+                'default_scopes' => array(
+                    'profile',
+                    'email'
                 )
             ),
             'SalesForce' => array(
                 'oauth_version' => 2,
-                'auth_url' => '',
-                'token_url' => '',
-                'api_url' => '',
-                'scopes' => array(
-
+                'auth_url' => 'https://login.salesforce.com/services/oauth2/authorize',
+                'token_url' => 'https://login.salesforce.com/services/oauth2/token',
+                'api_url' => 'https://ap1.salesforce.com/services/data',
+                'auth_method' => 'post',
+                'default_scopes' => array(
+                    'api',
+                    'web'
                 )
             ),
             'SoundCloud' => array(
                 'oauth_version' => 2,
-                'auth_url' => '',
-                'token_url' => '',
-                'api_url' => '',
-                'scopes' => array(
-
+                'auth_url' => 'https://soundcloud.com/connect',
+                'token_url' => 'https://api.soundcloud.com/oauth2/token',
+                'api_url' => 'https://api.soundcloud.com',
+                'auth_method' => 'post',
+                'default_scopes' => array(
+                    '*'
                 )
             ),
             'Tumblr' => array(
@@ -299,7 +349,9 @@ class Module_Accounts extends Module
                 'auth_url' => '',
                 'token_url' => '',
                 'api_url' => '',
-                'scopes' => array(
+                'auth_method' => 'post',
+                'api_method' => 'get',
+                'default_scopes' => array(
 
                 )
             ),
@@ -308,21 +360,26 @@ class Module_Accounts extends Module
                 'auth_url' => '',
                 'token_url' => '',
                 'api_url' => '',
-                'scopes' => array(
+                'auth_method' => 'post',
+                'api_method' => 'get',
+                'default_scopes' => array(
 
                 )
             ),
             'Windows Live' => array(
                 'oauth_version' => 2,
-                'auth_url' => '',
-                'token_url' => '',
-                'api_url' => '',
-                'scopes' => array(
-
+                'auth_url' => 'https://oauth.live.com/authorize',
+                'token_url' => 'https://oauth.live.com/token',
+                'api_url' => 'https://apis.live.net/v5.0',
+                'auth_method' => 'post',
+                'default_scopes' => array(
+                    'wl.basic',
+                    'wl.emails'
                 )
             ),
         );
 
+        // Save them each
         foreach($providers as $name => $data)
         {
             Accounts::add_provider($name, $data);

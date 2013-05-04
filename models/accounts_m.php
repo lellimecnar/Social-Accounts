@@ -1,5 +1,10 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed');
 
+/**
+ * Accounts
+ *
+ * @author  Lance Miller <lance@astolat.com>
+ */
 class Accounts_m extends MY_Model
 {
     private $params = array(
@@ -16,11 +21,17 @@ class Accounts_m extends MY_Model
         )
     );
 
+    /**
+     * Figure out what data to get
+     * @param  string $method
+     * @param  array $args
+     * @return stdClass or null
+     */
     public function __call($method, $args)
     {
         empty($args) and $args = array( array() );
 
-        preg_match('/^(get|save|delete)_?(data|account|provider)(s?)$/', strtolower($method), $m);
+        preg_match('/^(get|save|delete)_?(account|provider)(s?)$/', strtolower($method), $m);
 
         if(sizeof($m) > 3)
         {
@@ -34,6 +45,12 @@ class Accounts_m extends MY_Model
         return null;
     }
 
+    /**
+     * We're getting some data
+     * @param  string $stream
+     * @param  array $args
+     * @return stdClass
+     */
     private function _get($stream, $args)
     {
         isset($args[0]) or $args[0] = array();
@@ -43,6 +60,12 @@ class Accounts_m extends MY_Model
         return $this->{ '_' . $stream }( $result['entries'] );
     }
 
+    /**
+     * We're just getting one row
+     * @param  string $stream
+     * @param  array $args
+     * @return stdClass
+     */
     private function _get_single($stream, $args)
     {
         switch($stream)
@@ -60,21 +83,32 @@ class Accounts_m extends MY_Model
         return isset($result[0])? $result[0] : null;
     }
 
+    /**
+     * We're saving data
+     * @param  string $stream
+     * @param  array $args
+     * @return int ID of insert/update
+     */
     private function _save($stream, $args)
     {
 
     }
 
+    /**
+     * We're deleting data
+     * @param  string $stream
+     * @param  array $args
+     */
     private function _delete($stream, $args)
     {
 
     }
 
-    private function _data($stream, $args)
-    {
-
-    }
-
+    /**
+     * Parse through Accounts result entries
+     * @param  array $entries
+     * @return array
+     */
     private function _accounts($entries)
     {
         foreach($entries as &$e)
@@ -86,6 +120,11 @@ class Accounts_m extends MY_Model
         return $entries;
     }
 
+    /**
+     * Parse through Providers result entries
+     * @param  array $entries
+     * @return array
+     */
     private function _providers($entries)
     {
         foreach($entries as &$e)
