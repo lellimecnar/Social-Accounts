@@ -107,6 +107,8 @@ class Accounts
                 case 'api_url':
                 case 'auth_method':
                 case 'api_method':
+                case 'token_return_type':
+                case 'api_return_type':
                 case 'scope_sep':
                     $params[$key] = $val;
                     break;
@@ -149,7 +151,7 @@ class Accounts
         // Get the provider
         $provider = self::provider($provider);
         // Add the scopes
-        self::$providers[$provider->slug]->scopes = array_merge(self::$providers[$provider->slug]->scopes, $scope);
+        self::$providers[$provider->slug]->scopes = array_unique(array_merge(self::$providers[$provider->slug]->scopes, $scope));
     }
 
     /**
@@ -199,7 +201,13 @@ class Accounts
         // Get the provider
         $provider = self::provider($provider);
         // Use the current user if it's not given
-        is_null($user_id) or $user_id = self::$user;
+        is_null($user_id) and $user_id = self::$user;
+
+        // We don't have a user to get an account for
+        if(is_null($user_id)) return null;
+
+        // Set the user for future use
+        self::$user = $user_id;
 
         // And return the result
         return self::$ci->accounts_m->get_account($user_id, $provider->slug);
@@ -214,7 +222,7 @@ class Accounts
      *      ));
      * 
      * @param  string $method Provider slug
-     * @param  array  $args Method arguments
+     * @param  array  $args Method arguments ($uri, $params, $expire)
      * @return stdClass API result
      */
     public static function __callStatic($method, $args)
@@ -242,8 +250,20 @@ class Accounts
                 'access_token' => self::access_token($provider->slug)
             );
 
-            // Get and return the result
-            $result = self::_do_curl($url, $params, (isset($args[1]) && is_string($args[1]))? $args[1] : $provider->api_method);
+            // Merge the parameters
+            isset($args[1]) and $params = array_merge($params, $args[1]);
+
+            // We need to cache the result
+            $cache_name = self::$ns.'/'.md5($url . $params['access_token'] . preg_replace('/[^a-zA-Z]+/','', serialize($args)));
+
+            if( ! $result = self::$ci->pyrocache->get($cache_name) )
+            {
+                // Get and cache the result since we don't already have it
+                $result = self::_do_curl($url, $params, (isset($args[2]) && is_string($args[2]))? $args[2] : $provider->api_method['key']);
+                self::$ci->pyrocache->write($result, $cache_name, (isset($args[3]))? (int) $args[3] : null);
+            }
+
+            // Return the result
             return json_decode($result);
         }
     }
@@ -257,27 +277,55 @@ class Accounts
      * but you can override them here.
      * 
      * @param  string $provider Provider slug
+     * @param  array $scopes An array of scopes for this authentication
      * @param  string $key Client ID
      * @param  string $secret Client Secret
      */
-    public static function auth($provider, $key = null, $secret = null)
+    public static function auth($provider, $scopes = array(), $key = null, $secret = null)
     {
         // Get the provider
         $provider = self::provider($provider);
 
+        // Add the scopes
+        self::add_scopes($provider->slug, $scopes);
+
         // Do we have the code back from the provider?
-        if(isset($_GET['code']))
+        if(self::$ci->input->get('code'))
         {
             // If so, then we need to get the token
             $result = self::_do_curl($provider->token_url, array(
-                'code' => $_GET['code'],
+                'code' => self::$ci->input->get('code'),
                 'client_id' => $provider->client_key,
                 'client_secret' => $provider->client_secret,
                 'grant_type' => 'authorization_code',
                 'redirect_uri' => rtrim(current_url(), '/').'/'
-            ), $provider->auth_method);
+            ), $provider->auth_method['key']);
 
-            $result = json_decode($result);
+            // Exit if something went wrong
+            if(self::$curl_header['status_code'] == 400) exit($result);
+
+            // Try parsing according the MIME-Type
+            switch(self::$curl_header['MIME-Type'])
+            {
+                case 'application/json':
+                    $result = json_decode($result);
+                    break;
+                default:
+                    // We'll use the token_return_type instead
+                    switch($provider->token_return_type['key'])
+                    {
+                        case 'json':
+                            $result = json_decode($result);
+                            break;
+                        case 'query_string':
+                            parse_str($result, $result);
+                            $result = (object) $result;
+                            break;
+                        case 'xml':
+                            break;
+                    }
+                    break;
+            }
 
             // Did we get the token?
             if(isset($result->access_token))
@@ -299,7 +347,7 @@ class Accounts
                 else
                 {
                     // If not, then let's try the current user
-                    is_logged_in() and $params['user'] = self::$ci->current_user->id;
+                    is_logged_in() and $params['user'] = self::$user;
                 } 
 
                 // Save it
@@ -316,7 +364,7 @@ class Accounts
                 // Nope, no token. Let's build the redirect URL..
                 $args = array(
                     'client_id' => $provider->client_key,
-                    'scope' => implode($provider->scope_sep, self::$providers[$provider->slug]->scopes),
+                    'scope' => implode($provider->scope_sep, array_unique(self::$providers[$provider->slug]->scopes)),
                     'redirect_uri' => rtrim(current_url(), '/').'/',
                     'access_type' => 'offline',
                     'response_type' => 'code'
@@ -415,7 +463,26 @@ class Accounts
 
         // Pull out and save the header
         $header_size = curl_getinfo(self::$ch, CURLINFO_HEADER_SIZE);
-        self::$curl_header = trim(substr($result, 0, $header_size));
+        $headers = trim(substr($result, 0, $header_size));
+        $headers = preg_split('/[\r\n]+/', $headers);
+        self::$curl_header = array();
+        foreach($headers as $value){
+            $header = explode(": ",$value);
+            if($header[0] && !$header[1]){
+                self::$curl_header['status'] = $header[0];
+                self::$curl_header['status_code'] = (int) preg_replace('/^[^\s]+\s(\d+)\s.+$/','$1',$header[0]);
+            }
+            elseif($header[0] && $header[1]){
+                self::$curl_header[$header[0]] = $header[1];
+                $slug = preg_replace('/[^a-z]+/', '', strtolower($header[0]));
+                switch($slug)
+                {
+                    case 'contenttype':
+                        self::$curl_header['MIME-Type'] = strtolower(current(explode(';', $header[1])));
+                        break;
+                }
+            }
+        }
 
         // Return just the content
         return trim(substr($result, $header_size));

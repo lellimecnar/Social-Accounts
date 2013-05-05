@@ -39,6 +39,7 @@ class Module_Accounts extends Module
 
     public function admin_menu(&$menu)
     {
+        $this->lang->load('accounts/accounts');
         $menu['lang:cp:nav_settings'] = array(
             'lang:cp:nav_settings' => 'admin/settings',
             'lang:accounts:title' => 'admin/accounts'
@@ -169,6 +170,36 @@ class Module_Accounts extends Module
                 'assign' => 'providers'
             ),
             array(
+                'name' => 'lang:'.$this->ns.':field:token_return_type',
+                'slug' => 'token_return_type', 
+                'namespace' => $this->ns,
+                'type' => 'choice',
+                'extra' => array(
+                    'choice_type' => 'dropdown',
+                    'choice_data' => 
+                        'json : JSON'."\r\n".
+                        'query_string : Query String'."\r\n".
+                        'xml : XML',
+                    'default_value' => 'json'
+                ),
+                'assign' => 'providers'
+            ),
+            array(
+                'name' => 'lang:'.$this->ns.':field:api_return_type',
+                'slug' => 'api_return_type', 
+                'namespace' => $this->ns,
+                'type' => 'choice',
+                'extra' => array(
+                    'choice_type' => 'dropdown',
+                    'choice_data' => 
+                        'json : JSON'."\r\n".
+                        'query_string : Query String'."\r\n".
+                        'xml : XML',
+                    'default_value' => 'json'
+                ),
+                'assign' => 'providers'
+            ),
+            array(
                 'name' => 'lang:'.$this->ns.':field:default_scopes',
                 'slug' => 'default_scopes', 
                 'namespace' => $this->ns,
@@ -243,6 +274,7 @@ class Module_Accounts extends Module
                 'auth_url' => 'https://www.facebook.com/dialog/oauth',
                 'token_url' => 'https://graph.facebook.com/oauth/access_token',
                 'api_url' => 'https://graph.facebook.com',
+                'token_return_type' => 'query_string',
                 'default_scopes' => array(
                     'offline_access', 
                     'email', 

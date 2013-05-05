@@ -14,6 +14,9 @@ class Admin extends Admin_Controller
 
     public function index($method)
     {
+
+        Accounts::auth('facebook', array('user_events'));
+        
         if($method == 'index') $method = 'accounts';
 
         $this->template->active_section = $method;
