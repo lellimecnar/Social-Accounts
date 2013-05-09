@@ -468,7 +468,7 @@ class Accounts
         self::$curl_header = array();
         foreach($headers as $value){
             $header = explode(": ",$value);
-            if($header[0] && !$header[1]){
+            if($header[0] && !isset($header[1])){
                 self::$curl_header['status'] = $header[0];
                 self::$curl_header['status_code'] = (int) preg_replace('/^[^\s]+\s(\d+)\s.+$/','$1',$header[0]);
             }
