@@ -18,6 +18,7 @@ $lang['accounts:field:client_secret'] = 'Client Secret';
 $lang['accounts:field:scope'] = 'Scope';
 $lang['accounts:field:access_token'] = 'Access Token';
 $lang['accounts:field:expiration'] = 'Expiration';
+$lang['accounts:field:refresh_token'] = 'Refresh Token';
 $lang['accounts:field:user'] = 'User';
 $lang['accounts:field:uid'] = 'UID';
 $lang['accounts:field:provider'] = 'Provider';

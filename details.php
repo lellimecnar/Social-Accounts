@@ -250,7 +250,14 @@ class Module_Accounts extends Module
                 'namespace' => $this->ns,
                 'type' => 'datetime',
                 'assign' => 'accounts'
-            )
+            ),
+            array(
+                'name' => 'lang:'.$this->ns.':field:refresh_token',
+                'slug' => 'refresh_token', 
+                'namespace' => $this->ns,
+                'type' => 'text',
+                'assign' => 'accounts'
+            ),
         );
 
         // ...and add them

@@ -8,6 +8,7 @@
 class Accounts
 {
     private static $ci, 
+        $accounts,
         $providers, 
         $scopes, 
         $ch, 
@@ -200,17 +201,23 @@ class Accounts
     {
         // Get the provider
         $provider = self::provider($provider);
-        // Use the current user if it's not given
-        is_null($user_id) and $user_id = self::$user;
 
-        // We don't have a user to get an account for
-        if(is_null($user_id)) return null;
+        if(!isset(self::$accounts[$provider->slug]))
+        {
+            // Use the current user if it's not given
+            is_null($user_id) and $user_id = self::$user;
 
-        // Set the user for future use
-        self::$user = $user_id;
+            // We don't have a user to get an account for
+            if(is_null($user_id)) return null;
 
-        // And return the result
-        return self::$ci->accounts_m->get_account($user_id, $provider->slug);
+            // Set the user for future use
+            self::$user = $user_id;
+
+            // Set the account
+            self::$accounts[self::$user][$provider->slug] = self::$ci->accounts_m->get_account($user_id, $provider->slug);
+        }
+        // Return the account
+        return self::$accounts[self::$user][$provider->slug];
     }
 
     /**
@@ -298,7 +305,7 @@ class Accounts
                 'client_id' => $provider->client_key,
                 'client_secret' => $provider->client_secret,
                 'grant_type' => 'authorization_code',
-                'redirect_uri' => rtrim(current_url(), '/').'/'
+                'redirect_uri' => rtrim(current_url(), '/').'/',
             ), $provider->auth_method['key']);
 
             // Exit if something went wrong
@@ -335,7 +342,8 @@ class Accounts
                     'provider' => $provider->id,
                     'access_token' => $result->access_token,
                     'token_type' => $result->token_type,
-                    'expiration' => date('Y-m-d G:i:s', now() + ((int) $result->expires_in * 100))
+                    'expiration' => date('Y-m-d G:i:s', now() + ((int) $result->expires_in * 100)),
+                    'refresh_token' => $result->refresh_token
                 );
 
                 if(self::$ci->controller == 'admin')
@@ -363,18 +371,67 @@ class Accounts
             {
                 // Nope, no token. Let's build the redirect URL..
                 $args = array(
+                    'response_type' => 'code',
                     'client_id' => $provider->client_key,
-                    'scope' => implode($provider->scope_sep, array_unique(self::$providers[$provider->slug]->scopes)),
                     'redirect_uri' => rtrim(current_url(), '/').'/',
+                    'scope' => implode($provider->scope_sep, array_unique(self::$providers[$provider->slug]->scopes)),
                     'access_type' => 'offline',
-                    'response_type' => 'code'
+                    'approval_prompt' => 'force'
                 );
                 $sep = strpos('?', $provider->auth_url)? '&' : '?';
 
                 // ...and send them over
                 redirect($provider->auth_url.$sep.str_replace('%2B','+',http_build_query($args)));
             }
+            else if(now() > $account->expiration)
+            {
+                self::refresh_token($provider->slug);
+            }
         }
+    }
+
+    /**
+     * Use the refresh_token to get a new access_token
+     * 
+     * @param  string $provider provider slug
+     */
+    private function refresh_token($provider)
+    {
+        // Get the provider
+        $provider = self::provider($provider);
+        // Get the account
+        $account = self::account($provider->slug);
+
+        // Request our new access token
+        $result = self::_do_curl($account->token_url, array(
+            'refresh_token' => $account->refresh_token,
+            'client_id' => $provider->client_key,
+            'client_secret' => $provider->client_secret,
+            'grant_type' => 'refresh_token'
+        ), $provider->auth_method['key']);
+
+        // Did we get the new token?
+        if(isset($result->access_token))
+        {
+            // If so, then let's get it ready to save
+            $params = array(
+                'access_token' => $result->access_token,
+                'token_type' => $result->token_type,
+                'expiration' => date('Y-m-d G:i:s', now() + ((int) $result->expires_in * 100))
+            );
+
+            // Update it
+            self::$ci->streams->entries->update_entry($account->id, $params, 'accounts', self::$ns);
+
+            // Update the accounts property
+            self::$accounts[$account->user['user_id']][$provider->slug] = $result->access_token;
+
+            // Return the new token
+            return $result->access_token;
+        }
+
+        // No useable token
+        return null;
     }
 
     /**
@@ -391,6 +448,12 @@ class Accounts
         // Get the account
         $account = self::account($provider->slug);
         if(isset($account->access_token)){
+            // Is it expired?
+            if(now() > $account->expiration)
+            {
+                // Get us a new token
+                $account->access_token = self::refresh_token($provider->slug);
+            }
             // We have a token, so set the Authorization Header and return the token
             self::_curl_opt('httpheader', array('Authorization: '.$account->token_type.' '.$account->access_token));
             return $account->access_token;
