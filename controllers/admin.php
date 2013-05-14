@@ -16,7 +16,7 @@ class Admin extends Admin_Controller
     {
 
         Accounts::set_user(0);
-        Accounts::auth('google', array('https://www.googleapis.com/auth/calendar'));
+        Accounts::auth('facebook', array('user_events'));
         
         if($method == 'index') $method = 'accounts';
 
