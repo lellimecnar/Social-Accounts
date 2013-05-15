@@ -202,7 +202,7 @@ class Accounts
         // Get the provider
         $provider = self::provider($provider);
 
-        if(!isset(self::$accounts[$provider->slug]))
+        if(!isset(self::$accounts[self::$user][$provider->slug]))
         {
             // Use the current user if it's not given
             is_null($user_id) and $user_id = self::$user;
@@ -337,12 +337,15 @@ class Accounts
             // Did we get the token?
             if(isset($result->access_token))
             {
+                isset($result->expires_in) and $expires = $result->expires_in;
+                isset($result->expires) and $expires = $result->expires;
+
                 // If so, then let's get it ready to save
                 $params = array(
                     'provider' => $provider->id,
                     'access_token' => $result->access_token,
                     'token_type' => $result->token_type,
-                    'expiration' => date('Y-m-d G:i:s', now() + ((int) $result->expires_in * 100)),
+                    'expiration' => date('Y-m-d G:i:s', now() + ((int) $expires * 100)),
                     'refresh_token' => $result->refresh_token
                 );
 
@@ -403,7 +406,7 @@ class Accounts
         $account = self::account($provider->slug);
 
         // Request our new access token
-        $result = self::_do_curl($account->token_url, array(
+        $result = self::_do_curl($provider->token_url, array(
             'refresh_token' => $account->refresh_token,
             'client_id' => $provider->client_key,
             'client_secret' => $provider->client_secret,
@@ -424,7 +427,7 @@ class Accounts
             self::$ci->streams->entries->update_entry($account->id, $params, 'accounts', self::$ns);
 
             // Update the accounts property
-            self::$accounts[$account->user['user_id']][$provider->slug] = $result->access_token;
+            self::$accounts[(int) $account->user['user_id']][$provider->slug] = $result->access_token;
 
             // Return the new token
             return $result->access_token;
