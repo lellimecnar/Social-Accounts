@@ -267,7 +267,7 @@ class Accounts
             {
                 // Get and cache the result since we don't already have it
                 $result = self::_do_curl($url, $params, (isset($args[2]) && is_string($args[2]))? $args[2] : $provider->api_method['key']);
-                self::$ci->pyrocache->write($result, $cache_name, (isset($args[3]))? (int) $args[3] : null);
+                self::$ci->pyrocache->write($result, $cache_name, (isset($args[3]))? (int) $args[3] : strtotime('+1 day'));
             }
 
             // Return the result
